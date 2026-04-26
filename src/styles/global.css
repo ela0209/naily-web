@@ -1,0 +1,198 @@
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --pink: #f8c8dc;
+  --pink-light: #fce4ef;
+  --pink-dark: #e0a0c0;
+  --cream: #f5f5dc;
+  --cream-dark: #ede8c8;
+  --purple: #6a0dad;
+  --purple-light: #9b4dca;
+  --purple-glow: rgba(106, 13, 173, 0.4);
+  --purple-soft: rgba(106, 13, 173, 0.15);
+  --glass-bg: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.25);
+  --glass-shadow: 0 8px 32px rgba(106, 13, 173, 0.15);
+  --gradient-main: linear-gradient(135deg, #f8c8dc 0%, #d4a0e8 50%, #6a0dad 100%);
+  --gradient-soft: linear-gradient(135deg, #fce4ef 0%, #e8d0f8 100%);
+  --gradient-btn: linear-gradient(135deg, #9b4dca, #6a0dad);
+  --text-dark: #1a0a2e;
+  --text-mid: #4a2060;
+  --text-light: #8a6a9a;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(160deg, #fce4ef 0%, #f5f5dc 40%, #e8d0f8 100%);
+  min-height: 100vh;
+  color: var(--text-dark);
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: -200px;
+  right: -200px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(106,13,173,0.12) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::after {
+  content: '';
+  position: fixed;
+  bottom: -200px;
+  left: -200px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(248,200,220,0.25) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/* === GLASS CARD === */
+.glass {
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px rgba(106, 13, 173, 0.12),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-lg);
+}
+
+.glass:hover {
+  background: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 16px 48px rgba(106, 13, 173, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transform: translateY(-4px);
+  transition: var(--transition);
+}
+
+/* === BUTTONS === */
+.btn-primary {
+  background: var(--gradient-btn);
+  color: white;
+  border: none;
+  padding: 13px 32px;
+  border-radius: 50px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: var(--transition);
+  box-shadow: 0 4px 20px var(--purple-glow),
+              0 0 0 0 rgba(106,13,173,0);
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+  border-radius: 50px;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px var(--purple-glow),
+              0 0 20px rgba(106,13,173,0.3);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--purple);
+  border: 1.5px solid rgba(106, 13, 173, 0.4);
+  padding: 12px 32px;
+  border-radius: 50px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-secondary:hover {
+  background: rgba(106, 13, 173, 0.1);
+  border-color: var(--purple);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(106,13,173,0.15);
+}
+
+/* === SECTION TITLE === */
+.section-title {
+  text-align: center;
+  margin-bottom: 56px;
+}
+
+.section-title h2 {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  color: var(--text-dark);
+  margin-bottom: 12px;
+  letter-spacing: -0.5px;
+}
+
+.section-title h2 span {
+  background: var(--gradient-main);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.section-title p {
+  font-size: 16px;
+  color: var(--text-light);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* === BADGE === */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(106, 13, 173, 0.2);
+  color: var(--purple);
+  padding: 6px 16px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 768px) {
+  :root {
+    --radius: 12px;
+    --radius-lg: 18px;
+  }
+}
