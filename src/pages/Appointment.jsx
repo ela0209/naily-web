@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { collection, addDoc, getDocs, doc, getDoc } from "firebase/firestore";
+import {
+  collection, addDoc, getDocs, doc, getDoc, query, where
+} from "firebase/firestore";
 import { db } from "../services/firebase";
 import { useAuth } from "../context/AuthContext";
 
@@ -14,6 +16,8 @@ export default function Appointment() {
   const [mesaj, setMesaj] = useState("");
   const [yukleniyor, setYukleniyor] = useState(false);
   const [basarili, setBasarili] = useState(false);
+  const [doluSaatler, setDoluSaatler] = useState([]); // ← YENİ
+  const [saatYukleniyor, setSaatYukleniyor] = useState(false); // ← YENİ
 
   const saatler = [
     "10:00", "11:00", "12:00", "13:00",
@@ -29,9 +33,52 @@ export default function Appointment() {
     getSalon();
   }, [salonId]);
 
+  // ── YENİ: Tarih değişince dolu saatleri çek ──
+  useEffect(() => {
+    if (!tarih || !salonId) {
+      setDoluSaatler([]);
+      return;
+    }
+
+    async function doluSaatleriCek() {
+      setSaatYukleniyor(true);
+      try {
+        const q = query(
+          collection(db, "randevular"),
+          where("salonId", "==", salonId),
+          where("tarih", "==", tarih),
+          where("durum", "in", ["beklemede", "onaylandi"])
+        );
+        const snapshot = await getDocs(q);
+        const doluList = snapshot.docs.map((d) => d.data().saat);
+        setDoluSaatler(doluList);
+
+        // Seçili saat artık doluysa sıfırla
+        if (saat && doluList.includes(saat)) {
+          setSaat("");
+          setMesaj("Seçtiğiniz saat doldu, lütfen başka bir saat seçin.");
+        } else {
+          setMesaj("");
+        }
+      } catch (e) {
+        console.error("Dolu saatler çekilemedi:", e);
+      } finally {
+        setSaatYukleniyor(false);
+      }
+    }
+
+    doluSaatleriCek();
+  }, [tarih, salonId]);
+
   async function handleRandevu() {
     if (!tarih || !saat) {
       setMesaj("Lütfen tarih ve saat seçin!");
+      return;
+    }
+
+    // Çift kontrol: seçilen saat hâlâ dolu mu?
+    if (doluSaatler.includes(saat)) {
+      setMesaj("Bu saat dolu! Lütfen başka bir saat seçin.");
       return;
     }
 
@@ -39,16 +86,20 @@ export default function Appointment() {
     setMesaj("");
 
     try {
-      const snapshot = await getDocs(collection(db, "randevular"));
-      const cakisan = snapshot.docs.find(
-        (d) =>
-          d.data().salonId === salonId &&
-          d.data().tarih === tarih &&
-          d.data().saat === saat
+      // Son anlık kontrol (race condition önlemi)
+      const q = query(
+        collection(db, "randevular"),
+        where("salonId", "==", salonId),
+        where("tarih", "==", tarih),
+        where("saat", "==", saat),
+        where("durum", "in", ["beklemede", "onaylandi"])
       );
+      const snapshot = await getDocs(q);
 
-      if (cakisan) {
-        setMesaj("Bu saat dolu! Lütfen başka bir saat seçin.");
+      if (!snapshot.empty) {
+        setMesaj("Bu saat az önce doldu! Lütfen başka bir saat seçin.");
+        setDoluSaatler((prev) => [...prev, saat]);
+        setSaat("");
         setYukleniyor(false);
         return;
       }
@@ -57,9 +108,11 @@ export default function Appointment() {
         salonId,
         salonAdi: salon.name,
         kullanici: currentUser.email,
+        userId: currentUser.uid,
         tarih,
         saat,
         durum: "beklemede",
+        olusturulma: new Date().toISOString(),
       });
 
       setBasarili(true);
@@ -146,7 +199,11 @@ export default function Appointment() {
                 type="date"
                 value={tarih}
                 min={bugun}
-                onChange={(e) => { setTarih(e.target.value); setMesaj(""); }}
+                onChange={(e) => {
+                  setTarih(e.target.value);
+                  setSaat("");
+                  setMesaj("");
+                }}
                 style={s.input}
                 className="form-input"
               />
@@ -155,21 +212,45 @@ export default function Appointment() {
 
           {/* Saat grid */}
           <div style={s.formGrup}>
-            <label style={s.label}>🕐 Saat Seçin</label>
+            <label style={s.label}>
+              🕐 Saat Seçin
+              {saatYukleniyor && (
+                <span style={{ fontSize: 11, color: "#9b72cf", marginLeft: 8, fontWeight: 400 }}>
+                  ⏳ Uygun saatler kontrol ediliyor...
+                </span>
+              )}
+              {tarih && !saatYukleniyor && doluSaatler.length > 0 && (
+                <span style={{ fontSize: 11, color: "#e8638c", marginLeft: 8, fontWeight: 400 }}>
+                  🔴 Dolu saatler seçilemez
+                </span>
+              )}
+            </label>
             <div style={s.saatGrid}>
-              {saatler.map((sa) => (
-                <button
-                  key={sa}
-                  onClick={() => { setSaat(sa); setMesaj(""); }}
-                  className="saat-btn"
-                  style={{
-                    ...s.saatBtn,
-                    ...(saat === sa ? s.saatBtnAktif : {}),
-                  }}
-                >
-                  {sa}
-                </button>
-              ))}
+              {saatler.map((sa) => {
+                const dolu = doluSaatler.includes(sa);
+                const secili = saat === sa;
+                return (
+                  <button
+                    key={sa}
+                    onClick={() => {
+                      if (dolu) return;
+                      setSaat(sa);
+                      setMesaj("");
+                    }}
+                    disabled={dolu || saatYukleniyor}
+                    className={dolu ? "" : "saat-btn"}
+                    style={{
+                      ...s.saatBtn,
+                      ...(secili ? s.saatBtnAktif : {}),
+                      ...(dolu ? s.saatBtnDolu : {}),
+                    }}
+                    title={dolu ? "Bu saat dolu" : sa}
+                  >
+                    {sa}
+                    {dolu && <span style={{ display: "block", fontSize: 9, marginTop: 2, opacity: 0.8 }}>Dolu</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -215,9 +296,9 @@ export default function Appointment() {
           {/* Onayla */}
           <button
             onClick={handleRandevu}
-            disabled={yukleniyor || basarili}
+            disabled={yukleniyor || basarili || saatYukleniyor}
             className="onayla-btn"
-            style={{ ...s.onaylaBtn, opacity: yukleniyor || basarili ? 0.72 : 1 }}
+            style={{ ...s.onaylaBtn, opacity: yukleniyor || basarili || saatYukleniyor ? 0.72 : 1 }}
           >
             {yukleniyor ? (
               <span style={{ display: "flex", alignItems: "center", gap: 8, justifyContent: "center" }}>
@@ -299,6 +380,7 @@ const s = {
   saatGrid: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 },
   saatBtn: { fontFamily: "'Outfit',sans-serif", padding: "11px 8px", borderRadius: 12, border: "1.5px solid #e8e2d9", background: "white", fontSize: 14, fontWeight: 500, color: "#4a4458" },
   saatBtnAktif: { background: "linear-gradient(135deg,#e8638c,#9b72cf)", color: "white", border: "1.5px solid transparent", fontWeight: 600, boxShadow: "0 4px 16px rgba(232,99,140,0.28)" },
+  saatBtnDolu: { background: "#f5f5f5", color: "#bbb", border: "1.5px solid #eee", cursor: "not-allowed", opacity: 0.7, fontSize: 12 },
 
   ozet: { background: "linear-gradient(135deg,#fdeef4,#f3eeff)", borderRadius: 16, border: "1px solid rgba(155,114,207,0.12)", padding: "18px 20px", marginBottom: 24 },
   ozetBaslik: { fontFamily: "'Cormorant Garamond',serif", fontSize: 16, fontWeight: 700, color: "#1a1625", margin: "0 0 14px" },

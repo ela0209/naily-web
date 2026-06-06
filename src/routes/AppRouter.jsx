@@ -8,9 +8,10 @@ import SalonDetail from "../pages/SalonDetail";
 import Appointment from "../pages/Appointment";
 import PreviewNail from "../pages/PreviewNail";
 import AdminDashboard from "../pages/AdminDashboard";
+import SuperAdminPanel from "../pages/SuperAdminPanel";
 import Profile from "../pages/Profile";
 import Navbar from "../components/Navbar";
-import { AdminRoute, PrivateRoute } from "../components/ProtectedRoute";
+import { AdminRoute, PrivateRoute, SuperAdminRoute } from "../components/ProtectedRoute";
 
 export default function AppRouter() {
   return (
@@ -46,6 +47,14 @@ export default function AppRouter() {
             <AdminRoute>
               <AdminDashboard />
             </AdminRoute>
+          }
+        />
+        <Route
+          path="/superadmin"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminPanel />
+            </SuperAdminRoute>
           }
         />
       </Routes>

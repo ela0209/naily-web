@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
-import { db } from "../services/firebase";
+import { db, auth } from "../services/firebase";  // auth ekle
+import { onAuthStateChanged } from "firebase/auth"; // bunu ekle
 import { Link } from "react-router-dom";
 
 function mesafeHesapla(lat1, lon1, lat2, lon2) {
@@ -55,16 +56,23 @@ export default function SalonList() {
   const [aramaMetni, setAramaMetni] = useState("");
   const [siralama, setSiralama] = useState("mesafe"); // mesafe | puan | isim
 
-  useEffect(() => {
-    async function getSalons() {
-      const snapshot = await getDocs(collection(db, "salons"));
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setSalons(data);
+useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (user) {
+      async function getSalons() {
+        const snapshot = await getDocs(collection(db, "salons"));
+        const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setSalons(data);
+        setLoading(false);
+        konumAl(data);
+      }
+      getSalons();
+    } else {
       setLoading(false);
-      konumAl(data);
     }
-    getSalons();
-  }, []);
+  });
+  return () => unsubscribe();
+}, []);
 
   function konumAl(salonData) {
     if (!navigator.geolocation) {
